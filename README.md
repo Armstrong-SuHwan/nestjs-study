@@ -1,7 +1,5 @@
 # Nestjs Study 
 
-## Chapter3. Controller 
-- Armstrong
 
 ```bash
 $ npm install
