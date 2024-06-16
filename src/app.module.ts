@@ -2,22 +2,11 @@ import { Module } from '@nestjs/common';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { EmailService } from './email/email.service';
-
-// TODO. Value Provider 사용 시 주의사항
-// import { CustomProviderService } from './custom-provider/custom-provider.service';
-//
-// const mockCustomProviderService = {
-//   findAll: () => {
-//     console.log('This is mocking service test');
-//   },
-// };
+import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [],
-  controllers: [UsersController],
-  providers: [
-    UsersService,
-    EmailService,
-  ],
+  imports: [UsersModule],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
