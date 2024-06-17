@@ -133,9 +133,90 @@ async function bootstrap() {
 bootstrap();
 ```
 ## Using the built-in ValidationPipe
+1. create-user.dto 구현
+```bash
+# create-user.dto.ts
+import { BadRequestException } from '@nestjs/common';
+import { Transform } from 'class-transformer';
+import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { NotIn } from 'src/utils/decorators/not-in';
 
+export class CreateUserDto {
+  @Transform(params => params.value.trim())
+  @NotIn('password', { message: 'password는 name과 같은 문자열을 포함할 수 없습니다.' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(30)
+  readonly name: string;
+
+  @Transform(({ value, obj }) => {
+    // if (obj.password.includes(obj.name.trim())) {
+    //   throw new BadRequestException('password는 name과 같은 문자열을 포함할 수 없습니다.');
+    // }
+    return value.trim();
+  })
+  @IsString()
+  @IsEmail()
+  @MaxLength(60)
+  readonly email: string;
+
+  @IsString()
+  @Matches(/^[A-Za-z\d!@#$%^&*()]{8,30}$/)
+  readonly password: string;
+}
+```
+2. 유효성 검사 
+- email 형식이 잘못된 경우
+```bash
+Invoke-RestMethod -Uri "http://localhost:3000/users" -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{ "name": "test", "email":"@gmail.com","password":"password" }'      
+Invoke-RestMethod : {"message":["email must be an email"],"error":"Bad Request","statusCode":400}
+```
+- password 길이가 짧은 경우
+```bash
+Invoke-RestMethod -Uri "http://localhost:3000/users" -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{ "name": "test", "email":"test@gmail.com","password":"pass" }'
+Invoke-RestMethod : {"message":["password must match /^[A-Za-z\\d!@#$%^&*()]{8,30}$/ regular expression"],"error":"Bad Request","statusCode":400}
+```
+- password에 name과 같은 문자열이 포함된 경우
+```bash
+Invoke-RestMethod -Uri "http://localhost:3000/users" -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{ "name": "test", "email":"test@gmail.com","password":"test-pass" }'
+Invoke-RestMethod : {"message":["password는 name과 같은 문자열을 포함할 수 없습니다.","password must match /^[A-Za-z\\d!@#$%^&*()]{8,30}$/ regular expression"],"error":"Bad Request","statusCode":400}
+```
+- name의 앞뒤에 공백이 포함된 경우 : 정상 동작
+```bash
+Invoke-RestMethod -Uri "http://localhost:3000/users" -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{ "name": " test ", "email":"test@gmail.com","password":"password" }'
+```
 ```bash
 $ npm install
+```
+
+3. 커스텀 유효성 검사기 
+```bash
+# not-in.ts
+import { registerDecorator, ValidationOptions, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+
+export function NotIn(property: string, validationOptions?: ValidationOptions) {
+  return (object: Object, propertyName: string) => {
+    registerDecorator({
+      name: 'NotIn', ## 데코레이터 이름
+      target: object.constructor, ## 데코레이터는 객체가 생성될때 적용됨
+      propertyName,
+      options: validationOptions,
+      constraints: [property],  # property라는 이름의 다른 속성을 기준으로 유효성 검사를 수행합니다.
+      validator: { # 유효성 검사 로직을 정의
+        #  value는 데코레이터가 적용된 속성의 값, args는 유효성 검사 인수
+        validate(value: any, args: ValidationArguments) {
+          # relatedPropertyName : 데코레이터가 참조하는 다른 속성의 이름
+          const [relatedPropertyName] = args.constraints; 
+          # relatedValue: 데코레이터가 참조하는 다른 속성의 값
+          const relatedValue = (args.object as any)[relatedPropertyName];
+          # value가 문자열이고, relatedValue가 문자열이며, value가 relatedValue에 포함되지 않으면 return true, 아니면 return false
+          return typeof value === 'string' && typeof relatedValue === 'string' &&
+            !relatedValue.includes(value);
+        }
+      },
+    });
+  };
+}
 ```
 
 ## Running the app
