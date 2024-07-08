@@ -1,14 +1,18 @@
-import { Module } from '@nestjs/common';
-import { EmailService } from '../email/email.service';
+import { Logger, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from 'src/auth/auth.module';
+import { EmailModule } from 'src/email/email.module';
+import { UserEntity } from './entity/user.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { EmailModule } from '../email/email.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserEntity } from './entity/user.entity';
 
 @Module({
-  imports: [EmailModule, TypeOrmModule.forFeature([UserEntity])],
+  imports: [
+    EmailModule,
+    TypeOrmModule.forFeature([UserEntity]),
+    AuthModule
+  ],
   controllers: [UsersController],
-  providers: [UsersService, EmailService],
+  providers: [UsersService/*, Logger*/],
 })
-export class UsersModule {}
+export class UsersModule { }
