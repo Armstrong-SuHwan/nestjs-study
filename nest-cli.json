@@ -6,7 +6,7 @@
     "deleteOutDir": true,
     "assets": [
       {
-        "include": ".config/env/*.env",
+        "include": "./config/env/*.env",
         "outDir": "./dist"
       }
     ]

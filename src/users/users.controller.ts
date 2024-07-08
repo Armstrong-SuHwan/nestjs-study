@@ -10,6 +10,10 @@ import {
   BadRequestException,
   Query,
   HttpCode,
+  ValidationPipe,
+  ParseIntPipe,
+  HttpStatus,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -23,10 +27,8 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  async createUser(@Body() dto: CreateUserDto): Promise<void> {
-    const { name, email, password } = dto;
-    await this.usersService.createUser(name, email, password);
-    console.log(dto);
+  create(@Body(ValidationPipe) createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
   }
 
   @Post('/email-verify')
@@ -43,9 +45,30 @@ export class UsersController {
     return await this.usersService.login(email, password);
   }
 
-  @Get('/:id')
-  async getUserInfo(@Param('id') userId: string): Promise<UserInfo> {
-    return await this.usersService.getUserInfo(userId);
+  // @Get('/:id')
+  // async getUserInfo(@Param('id') userId: string): Promise<UserInfo> {
+  //   return await this.usersService.getUserInfo(userId);
+  // }
+
+  @Get(':id')
+  findOne(
+    @Param(
+      'id',
+      new ParseIntPipe({ errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE }),
+    )
+    id: number,
+  ) {
+    return this.usersService.findOne(id);
+  }
+
+  @Get()
+  findAll(
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    console.log(offset, limit);
+
+    return this.usersService.findAll();
   }
 
   // @Post()

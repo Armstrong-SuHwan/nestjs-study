@@ -10,17 +10,20 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import emailConfig from './config/emailConfig';
 import { validationSchema } from './config/validationSchema';
 
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+
 @Module({
   imports: [
     UsersModule,
     EmailModule,
     ConfigModule.forRoot({
       // envFilePath:
-      //   process.env.NODE_ENV === 'production'
-      //     ? '.production.env'
-      //     : process.env.NODE_ENV === 'stage'
-      //       ? '.stage.env'
-      //       : '.development.env',
+        // process.env.NODE_ENV === 'production'
+        //   ? '.production.env'
+        //   : process.env.NODE_ENV === 'stage'
+        //     ? '.stage.env'
+        //     : '.development.env',
+        
       envFilePath: [`${__dirname}/config/env/.${process.env.NODE_ENV}.env`],
       load: [emailConfig],
       isGlobal: true,
