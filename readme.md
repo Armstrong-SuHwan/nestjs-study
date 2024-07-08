@@ -1,147 +1,206 @@
-Middleware
-=============
-### 1. 미들웨어의 정의
-Route Handler가 Client의 Request를 처리 되기 전에 수행되는 컴포넌트   
-![img.png](asset/img.png)
+# Logging: 애플리케이션의 동작 기록
 
-### 2. 미들웨어의 주요 역할
-1. **코드 실행**
-2. **Request 및 Response 객체 수정**
-3. **Request 및 Response 주기 종료** 
-4. **다음 Middleware 호출**
-    + next()로 호출 스택상 다음 미들웨어 제어권을 전달
-    + next()를 호출하지 않으면, 요청은 현재 미들웨어 함수에서 멈추게 되며, 다음 단계로 진행되지 않음
-    + "Hanging" 상태는 Request-Response 주기가 완전히 종료되지 않고, 요청이 대기 상태로 남아 있는 것
+## 로그 사용의 목적?
 
-### 3. 미들웨어 구현
-+ 함수로 구현 (NestJS의 다른 기능과 통합 X)
-```ts
-import { Request, Response, NextFunction } from 'express';
+* 이슈 발생 시 빠른 해결을 위하여
+* 유저의 사용 패턴을 분석하기 위하여
 
-export function logger(req: Request, res: Response, next: NextFunction) {
-    console.log(`Request...`);
-    next(); 
+## 내장로거
+
+내장 로거 클래스는 `@nest/common` 패키지로 제공된다.
+
+- 로깅 비활성화
+- 로그 레벨 지정
+- 로거의 타임스탬프 재정의
+- 오버라이딩
+- 기본 로거 확장 -> 커스텀
+- 의존성 주입을 통해 로거 주입 및 테스트 모듈로 제공
+
+---
+내장 로거의 인스턴스는 로그를 남기고자 하는 부분에서 직접 생성하여 사용할 수 있다.
+
+```typescript
+@Injectable()
+export class AppService {
+  constructor(private myLogger: MyLogger) { }
+
+  private readonly logger = new Logger(AppService.name);
+
+  getHello(): string {
+    this.printDefaultLogs();
+
+    return 'Hello World!';
+  }
+
+  private printDefaultLogs() {
+    this.logger.error('level: error');
+    this.logger.warn('level: warn');
+    this.logger.log('level: log');
+    this.logger.verbose('level: verbose');
+    this.logger.debug('level: debug');
+  }
 }
 ```
 
-+ 클래스로 구현
-  + NestMiddleware 인터페이스를 사용
-    ```ts
-    import { Injectable, NestMiddleware } from '@nestjs/common';
-    import { NextFunction } from 'express';
-    
-    @Injectable()
-    export class LoggerMiddleware implements NestMiddleware {
-      use(req: Request, res: Response, next: NextFunction) {
-        console.log('Received request', req);
-        next();
-      }
-    }
-    ```
-    + Middleware 설정
-        ```ts
-        ...
-        import { MiddlewareConsumer, Module } from '@nestjs/common';
-        import { LoggerMiddleware } from './logger/logger.middleware';
-    
-        @Module({
-          imports: [
-            UsersModule,
-            ConfigModule.forRoot({
-              ...
-            }),
-            TypeOrmModule.forRoot({
-              ...
-            }),
-          ],
-          controllers: [],
-          providers: [],
-        })
-        export class AppModule {
-          configure(consumer: MiddlewareConsumer): any {
-            consumer.apply(LoggerMiddleware).forRoutes('/users');
-          }
-        }
-        ```   
-        cf) route에 wild card 사용 가능   
-        ![img_1.png](asset/img_1.png)
-      + NestMiddleware 인터페이스
-        ```ts
-        export interface NestMiddleware<TRequest = any, TResponse = any> {
-          use(req: TRequest, res: TResponse, next: (error?: Error | any) => void): any;
-        }
-        ```
-        + req와 res의 Type이 Request와 Response로 고정되어있지 않을까?
-          * Express와 Fastify의 차이   
-          ![img.png](img.png)   
-          Fastify는 Middleware를 플러그인 시스템으로 구현됨.   
-          (참고: https://fastify.dev/docs/latest/Reference/Plugins/)   
-          Fastify를 사용하는 경우, 미들웨어는 request와 reply 객체를 사용   
-              ```ts
-                import { Injectable, NestMiddleware } from '@nestjs/common';
-                import { FastifyRequest, FastifyReply } from 'fastify';
-            
-                @Injectable()
-                export class LoggerMiddleware implements NestMiddleware {
-                  use(req: FastifyRequest['raw'], res: FastifyReply['raw'], next: () => void) {
-                    console.log('Request...');
-                    next();
-                  }
-                }
-              ```
-          * REST API가 아닌 GraphQL과 같은 것들도 처리 가능하도록...
-          + MiddlewareConsumer
-            + MiddlewareConsumer는 NestJS에서 미들웨어를 관리하기 위한 헬퍼 클래스
-            + 여러 가지 내장 메서드를 제공하며, 이를 통해 미들웨어를 Fluent 방식으로 쉽게 관리   
-              (참고: https://en.wikipedia.org/wiki/Fluent_interface)
-            + middleware-consumer.interface.d.ts      
-            ```ts
-            export interface MiddlewareConsumer {
-               apply(...middleware: (Type<any> | Function)[]): MiddlewareConfigProxy;
-            }
-            ```   
-            ```ts
-            export interface MiddlewareConfigProxy {
-              /**
-               * ...routes: (string | RouteInfo)[] -> 다중 url 또는 컨트롤러도 등록이 가능하다.
-               */
-              /**
-              * exclude: 미들웨어를 적용하지 않는 경로
-              **/
-              exclude(...routes: (string | RouteInfo)[]): MiddlewareConfigProxy;
-              forRoutes(...routes: (string | Type<any> | RouteInfo)[]): MiddlewareConsumer;
-            }
-            ```   
-          + 전역으로 Middleware 적용하기   
-            + 주의점: INestApplication 타입에 정의된 use는 클래스를 인수로 받을 수 없음   
-            -> NestMiddleware 인터페이스가 아닌 function으로 작성해야함.
-            ```ts
-            import { NextFunction } from 'express';
-          
-            export function Logger4IdentifyMiddleware(
-              req: Request,
-              res: Response,
-              next: NextFunction,
-            ) {
-              console.log(`===REQUEST ARRIVED ${Date.now()} ===`);
-              next();
-            }
-            ```
-            ```ts
-            import { NestFactory } from '@nestjs/core';
-              import { AppModule } from './app.module';
-              import { ValidationPipe } from '@nestjs/common';
-              import { Logger4IdentifyMiddleware } from './logger/logger4Identify.middleware';
-              
-              async function bootstrap() {
-                const app = await NestFactory.create(AppModule);
-                app.useGlobalPipes(
-                  new ValidationPipe({
-                    transform: true,
-                  }),
-                );
-                app.use(Logger4IdentifyMiddleware);
-                await app.listen(3000);
-              }
-              bootstrap();
-            ```
+``` sh
+[Nest] 10932  - 07/09/2024, 2:45:38 AM   ERROR level: error
+[Nest] 10932  - 07/09/2024, 2:45:38 AM    WARN level: warn
+[Nest] 10932  - 07/09/2024, 2:45:38 AM     LOG level: log
+[Nest] 10932  - 07/09/2024, 2:45:38 AM VERBOSE level: verbose
+[Nest] 10932  - 07/09/2024, 2:45:38 AM   DEBUG level: debug
+```
+
+#### 로그 비활성화
+``` typescript
+const app = await NestFactory.create(AppModule, {
+    logger: false
+  });
+```
+
+#### 로그 레벨 지정
+
+``` typescript
+const app = await NestFactory.create(AppModule, {
+    logger: process.env.NODE_ENV === 'production'
+      ? ['error', 'warn', 'log']
+      : ['error', 'warn', 'log', 'verbose', 'debug']
+  });
+```
+
+#### 커스텀 로거
+``` typescript
+export class MyLogger implements LoggerService {
+  log(message: any, ...optionalParams: any[]) {
+    console.log(message);
+  }
+  error(message: any, ...optionalParams: any[]) {
+    console.log(message);
+  }
+  warn(message: any, ...optionalParams: any[]) {
+    console.log(message);
+  }
+  debug?(message: any, ...optionalParams: any[]) {
+    console.log(message);
+  }
+  verbose?(message: any, ...optionalParams: any[]) {
+    console.log(message);
+  }
+}
+```
+
+``` sh
+level: error
+level: warn
+level: log
+level: verbose
+level: debug
+```
+
+- ConsoleLogger 상속 받기
+``` typescript
+export class MyLogger extends ConsoleLogger {
+  log(message: any, stack?: string, context?: string) {
+    super.log.apply(this, arguments);
+    this.doSomething();
+  }
+  error(message: any, stack?: string, context?: string){
+    this.doSomething();
+    super.error.apply(this, arguments);
+  }
+
+  private doSomething() {
+    // 여기에 로깅에 관련된 부가 로직을 추가합니다.
+    // ex. DB에 저장
+    console.error("MYLOGGER!");    
+  }
+}
+```
+
+- 커스텀 로거 주입
+``` typescript
+import { Module } from '@nestjs/common';
+import { MyLogger } from './my-logger.service';
+
+@Module({
+  providers: [MyLogger],
+  exports: [MyLogger],
+})
+export class LoggerModule { }
+```
+``` typescript
+import { LoggerModule } from './logging/logger.module';
+
+@Module({
+  imports: [LoggerModule],
+  ...
+})
+export class AppModule { }
+```
+``` typescript
+import { MyLogger } from './logging/my-logger.service';
+
+@Injectable()
+export class AppService {
+  constructor(private myLogger: MyLogger) { }
+  private readonly myLogger = new MyLogger();
+
+  getHello(): string {
+    this.printMyLogs();
+
+    return 'Hello World!';
+  }
+
+  private printMyLogs() {
+    this.myLogger.error('level: error');
+    this.myLogger.warn('level: warn');
+    this.myLogger.log('level: log');
+    this.myLogger.verbose('level: verbose');
+    this.myLogger.debug('level: debug');
+  }
+}
+```
+
+``` sh
+MYLOGGER!
+[Nest] 12721  - 07/09/2024, 3:04:21 AM   ERROR level: error
+[Nest] 12721  - 07/09/2024, 3:04:21 AM    WARN level: warn
+[Nest] 12721  - 07/09/2024, 3:04:21 AM     LOG level: log
+MYLOGGER!
+[Nest] 12721  - 07/09/2024, 3:04:21 AM VERBOSE level: verbose
+[Nest] 12721  - 07/09/2024, 3:04:21 AM   DEBUG level: debug
+```
+
+#### 커스텀 로거를 전역으로 사용하기
+``` typescript
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useLogger(app.get(MyLogger));
+  await app.listen(3000);
+}
+```
+
+``` sh
+[Nest] 12795  - 07/09/2024, 3:05:47 AM     LOG [NestFactory] Starting Nest application...
+[Nest] 12795  - 07/09/2024, 3:05:47 AM     LOG [InstanceLoader] LoggerModule dependencies initialized +21ms
+[Nest] 12795  - 07/09/2024, 3:05:47 AM     LOG [InstanceLoader] AppModule dependencies initialized +0ms
+[Nest] 12795  - 07/09/2024, 3:05:47 AM     LOG [RoutesResolver] AppController {/}:
+MYLOGGER!
+[Nest] 12795  - 07/09/2024, 3:05:47 AM     LOG [RouterExplorer] Mapped {/, GET} route
+MYLOGGER!
+[Nest] 12795  - 07/09/2024, 3:05:47 AM     LOG [NestApplication] Nest application successfully started
+MYLOGGER!
+```
+
+---
+
+## 외부 로거
+
+내부 로거가 있는데도 쓰는 이유?
+
+> 콘솔에만 출력하는 것이 아닌, 파일로 저장
+>
+> 중요한 로그는 데이터 베이스에 저장
+>
+> 다른 서비스로 전송하기도 (datadog 등)
+
+### winston
