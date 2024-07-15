@@ -1,16 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { MyLogger } from './logging/my-logger.service';
+import { HttpExceptionFilter } from './exception/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    // logger: process.env.NODE_ENV === 'production'
-    //   ? ['error', 'warn', 'log']
-    //   : ['error', 'warn', 'log', 'verbose', 'debug']
-
-    // logger: ['debug']
-  });
-  app.useLogger(app.get(MyLogger));
+  const app = await NestFactory.create(AppModule);
+  // app.useGlobalFilters(new HttpExceptionFilter());
   await app.listen(3000);
 }
 bootstrap();

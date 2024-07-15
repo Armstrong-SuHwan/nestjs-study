@@ -1,36 +1,62 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Res, HttpCode, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  UseFilters,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { HttpExceptionFilter } from 'src/exception/http-exception.filter';
 
 @Controller('users')
+// @UseFilters(HttpExceptionFilter)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
+  // @UseFilters(HttpExceptionFilter)
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
-    const { name, email } = createUserDto;
-
-    return `유저를 생성했습니다. 이름: ${name}, 이메일: ${email}`;
+    return this.usersService.create(createUserDto);
   }
 
   @Get()
-  findAll(@Res() res) {
-    const users = this.usersService.findAll()
-
-    return res.status(200).send(users);
+  findAll() {
+    return this.usersService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     if (+id < 1) {
-      throw new NotFoundException('User is not found');
+      // 1. 단순 문자열
+      // throw new BadRequestException('id는 0보다 큰 정수여야 합니다');
+
+      // 2. HttpException
+      // throw new HttpException(
+      //   {
+      //     errorMessage: 'id는 0보다 큰 정수여야 합니다',
+      //     foo: 'bar'
+      //   },
+      //   HttpStatus.BAD_REQUEST
+      // );
+
+      // 3. 기본 제공 예외에 description을 함께 전달
+      throw new BadRequestException(
+        'id는 0보다 큰 정수여야 합니다',
+        'id format exception',
+      );
     }
 
     return this.usersService.findOne(+id);
   }
 
-  @HttpCode(202)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(+id, updateUserDto);
