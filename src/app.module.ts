@@ -5,9 +5,10 @@ import { AppService } from './app.service';
 import { HttpExceptionFilter } from './exception/http-exception.filter';
 import { UsersModule } from './users/users.module';
 import { ExceptionModule } from './exception/exception.modules';
+import { LoggingModule } from './logging/logging.module';
 
 @Module({
-  imports: [UsersModule, ExceptionModule],
+  imports: [UsersModule, ExceptionModule, LoggingModule],
   controllers: [AppController],
   providers: [
     AppService,

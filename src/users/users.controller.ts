@@ -10,11 +10,13 @@ import {
   HttpException,
   HttpStatus,
   UseFilters,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { HttpExceptionFilter } from 'src/exception/http-exception.filter';
+import { ErrorsInterceptor } from '../interceptor/errors.interceptor';
 
 @Controller('users')
 // @UseFilters(HttpExceptionFilter)
@@ -24,6 +26,7 @@ export class UsersController {
   // @UseFilters(HttpExceptionFilter)
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
+    console.log(createUserDto);
     return this.usersService.create(createUserDto);
   }
 
@@ -32,24 +35,12 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @UseInterceptors(ErrorsInterceptor)
   @Get(':id')
   findOne(@Param('id') id: string) {
     if (+id < 1) {
-      // 1. 단순 문자열
-      // throw new BadRequestException('id는 0보다 큰 정수여야 합니다');
-
-      // 2. HttpException
-      // throw new HttpException(
-      //   {
-      //     errorMessage: 'id는 0보다 큰 정수여야 합니다',
-      //     foo: 'bar'
-      //   },
-      //   HttpStatus.BAD_REQUEST
-      // );
-
-      // 3. 기본 제공 예외에 description을 함께 전달
       throw new BadRequestException(
-        'id는 0보다 큰 정수여야 합니다',
+        `[Received ID:${id}] id는 0보다 큰 정수여야 합니다.`,
         'id format exception',
       );
     }
