@@ -1,14 +1,14 @@
-import { Controller, Get } from '@nestjs/common';
-import { ServiceB } from './service-B';
+import { Controller, Get, Inject } from '@nestjs/common';
+import { CommonService } from './common/common-service';
 
 @Controller()
 export class AppController {
   constructor(
-    private readonly serviceB: ServiceB,
+    private readonly commonService: CommonService,
   ) { }
 
-  @Get('/serviceB')
-  getHelloC(): string {
-    return this.serviceB.getHello();
+  @Get('/common-hello')
+  getCommonHello(): string {
+    return this.commonService.hello();
   }
 }
