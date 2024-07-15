@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Res, HttpCode, NotFoundException, Header, Redirect, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Res, HttpCode, NotFoundException, Header, Redirect, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { GetUsersDto } from './dto/get-users.dto';
 
 @Controller('users')
 export class UsersController {
@@ -16,9 +15,7 @@ export class UsersController {
   }
 
   @Get()
-  findAll(@Res() res, @Query() dto: GetUsersDto) {
-    console.log(dto);
-
+  findAll(@Res() res) {
     const users = this.usersService.findAll()
 
     return res.status(200).send(users);
@@ -27,7 +24,7 @@ export class UsersController {
   // @Get(':id')
   // findOne(@Param('id') id: string) {
   //   if (+id < 1) {
-  //     throw new BadRequestException('id는 0보다 큰 값이어야 합니다.');
+  //     throw new NotFoundException('User is not found');
   //   }
 
   //   return this.usersService.findOne(+id);
@@ -53,7 +50,7 @@ export class UsersController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+    return `This action removes a #${id} user`;
   }
 
   // @Delete(':userId/memo/:memoId')
