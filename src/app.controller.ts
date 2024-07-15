@@ -1,14 +1,19 @@
-import { Controller, Get, Inject } from '@nestjs/common';
-import { CommonService } from './common/common-service';
+import { Controller, Get } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 @Controller()
 export class AppController {
   constructor(
-    private readonly commonService: CommonService,
+    private readonly configService: ConfigService,
   ) { }
 
-  @Get('/common-hello')
-  getCommonHello(): string {
-    return this.commonService.hello();
+  @Get()
+  getHello(): string {
+    return process.env.DATABASE_HOST;
+  }
+
+  @Get('/db-host-from-config')
+  getDatabaseHostFromConfigService(): string {
+    return this.configService.get('DATABASE_HOST');
   }
 }
