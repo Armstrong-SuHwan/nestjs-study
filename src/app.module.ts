@@ -1,21 +1,13 @@
-import { Logger, Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { HttpExceptionFilter } from './exception/http-exception.filter';
-import { UsersModule } from './users/users.module';
-import { ExceptionModule } from './exception/exception.modules';
+import { Module } from '@nestjs/common';
+import { TerminusModule } from '@nestjs/terminus';
+import { BatchModule } from './batch/batch.module';
+import { HealthCheckController } from './health-check/health-check.controller';
+import { HttpModule } from '@nestjs/axios';
+import { DogHealthIndicator } from './health-check/dog.health';
 
 @Module({
-  imports: [UsersModule, ExceptionModule],
-  controllers: [AppController],
-  providers: [
-    AppService,
-    // Logger,
-    // {
-    //   provide: APP_FILTER,
-    //   useClass: HttpExceptionFilter,
-    // },
-  ],
+  imports: [BatchModule, TerminusModule, HttpModule],
+  providers: [DogHealthIndicator],
+  controllers: [HealthCheckController],
 })
-export class AppModule {}
+export class AppModule { }
